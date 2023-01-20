@@ -34,8 +34,6 @@ cap = cv2.VideoCapture(0)
 while(1):
     _, frame = cap.read()
     frame2 = frame
-    width = 640
-    height = 480
     cv2.rectangle(frame, (153, 115), (486, 364), (255,0,0),2)
     cv2.imshow('frame', frame)
     frame = frame2[120:360, 160:480]
