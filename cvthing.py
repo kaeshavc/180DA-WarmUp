@@ -1,55 +1,61 @@
-from cgitb import reset
+#https://code.likeagirl.io/finding-dominant-colour-on-an-image-b4e075f98097
+import cv2
 import numpy as np
-import cv2 as cv
-cap = cv.VideoCapture(0)
-while(1):
-    # Take each frame
-    _, frame = cap.read()
-    fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
 
 
-    # Convert BGR to HSV
-    ###hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-    # define range of red color in HSV
-    # upper boundary RED color range values; Hue (160 - 180)
-    ###lower_red = np.array([160,100,20])
-    ###upper_red = np.array([179,255,255])
-    # Threshold the HSV image to get only red colors
-    ###mask = cv.inRange(hsv, lower_red, upper_red)
-    # Bitwise-AND mask and original image
-    ###res = cv.bitwise_and(frame,frame, mask= mask)
+def find_histogram(clt):
     
-    grayscale = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    numLabels = np.arange(0, len(np.unique(clt.labels_)) + 1)
+    (hist, _) = np.histogram(clt.labels_, bins=numLabels)
 
-    #fgmask = fgbg.apply(grayscale)
+    hist = hist.astype("float")
+    hist /= hist.sum()
 
+    return hist
+def plot_colors2(hist, centroids):
+    bar = np.zeros((50, 300, 3), dtype="uint8")
+    startX = 0
 
-    #contours,hierarchy = cv.findContours(grayscale,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE)
-    ret,thresh = cv.threshold(grayscale,127,255,0)
-    contours,hierarchy = cv.findContours(thresh, 1, 2)
+    for (percent, color) in zip(hist, centroids):
+        endX = startX + (percent * 300)
+        cv2.rectangle(bar, (int(startX), 0), (int(endX), 50),
+                      color.astype("uint8").tolist(), -1)
+        startX = endX
 
-    cnt = contours[0]
-    x,y,w,h = cv.boundingRect(cnt)
-    cv.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+    return bar
 
-    #ret,thresh = cv.threshold(grayscale,127,255,0)
-    #contours,hierarchy = cv.findContours(thresh, 1, 2)
-    #cnt = contours[0]
-    #x,y,w,h = cv.boundingRect(cnt)
+plt.ion()
+fig = plt.figure()
+ax = fig.add_subplot(1,1,1)
+cap = cv2.VideoCapture(0)
 
+while(1):
+    _, frame = cap.read()
+    frame2 = frame
+    width = 640
+    height = 480
+    cv2.rectangle(frame, (153, 115), (486, 364), (255,0,0),2)
+    cv2.imshow('frame', frame)
+    frame = frame2[120:360, 160:480]
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = frame.reshape((frame.shape[0] * frame.shape[1],3)) 
 
-    #cv.imshow('frame',frame)
-    #cv.imshow('grayscale', grayscale)
-    ###cv.imshow('mask',mask)
-    #cv.rectangle(grayscale,(x,y),(x+w,y+h),(0,255,0),2)
-    #cv.imshow('frame',fgmask)
-    cv.imshow("original",frame)
+    cluster_num = KMeans(n_clusters=4) 
+    cluster_num.fit(frame)
 
-    ###cv.imshow('res',res)
-    k = cv.waitKey(5) & 0xFF
+    hist = find_histogram(cluster_num)
+    bar = plot_colors2(hist, cluster_num.cluster_centers_)
+    plt.axis("off")
+    plt.imshow(bar)
+
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+    
+    k = cv2.waitKey(5) & 0xFF
     if k == 27:
         break
 
-    
 
-cv.destroyAllWindows()
+cv2.destroyAllWindows()
